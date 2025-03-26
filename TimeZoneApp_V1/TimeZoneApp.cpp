@@ -1,10 +1,18 @@
 #include "TimeZoneApp.h"
+#include "FileUtils.h"
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
 
-TimeZoneApp::TimeZoneApp() : dstEnabled(true) {
+TimeZoneApp::TimeZoneApp(const std::string& favoritesFile)
+    : dstEnabled(true), favoritesFilePath(favoritesFile) {
     initializeTimeZones();
+    loadFavorites();
+}
+
+TimeZoneApp::~TimeZoneApp() {
+    // Save favorites when the application closes
+    saveFavorites();
 }
 
 void TimeZoneApp::initializeTimeZones() {
@@ -24,6 +32,27 @@ void TimeZoneApp::initializeTimeZones() {
         TimeZone("AKST", "Alaska Standard Time", -9.0, true),
         TimeZone("HAST", "Hawaii-Aleutian Standard Time", -10.0, true)
     };
+}
+
+bool TimeZoneApp::saveFavorites() {
+    return FileUtils::saveToCSV(favoritesFilePath, favorites);
+}
+
+bool TimeZoneApp::loadFavorites() {
+    favorites = FileUtils::loadFromCSV(favoritesFilePath);
+
+    // Validate loaded favorites against existing time zones
+    std::vector<std::string> validFavorites;
+    for (const auto& tzName : favorites) {
+        if (findTimeZone(tzName)) {
+            validFavorites.push_back(tzName);
+        }
+    }
+
+    // Update favorites with only valid time zones
+    favorites = validFavorites;
+
+    return !favorites.empty();
 }
 
 void TimeZoneApp::displayUTCTime() {
@@ -72,7 +101,16 @@ void TimeZoneApp::displayAllTimeZones() {
 
         DateTime localTime = utcNow.addHours(totalOffset);
 
-        std::cout << std::left << std::setw(6) << tz.name << " | "
+        // Check if this time zone is in favorites
+        bool isFavorite = std::find(favorites.begin(), favorites.end(), tz.name) != favorites.end();
+
+        // Add a star next to favorite time zones
+        std::string displayName = tz.name;
+        if (isFavorite) {
+            displayName = "* " + displayName;
+        }
+
+        std::cout << std::left << std::setw(6) << displayName << " | "
             << std::left << std::setw(32) << tz.region << " | "
             << std::left << std::setw(20) << localTime.toString("%Y-%m-%d %H:%M") << " | ";
 
@@ -88,6 +126,9 @@ void TimeZoneApp::displayAllTimeZones() {
 
         std::cout << std::endl;
     }
+
+    std::cout << std::string(60, '-') << std::endl;
+    std::cout << "* Indicates favorite time zones" << std::endl;
 }
 
 TimeZone* TimeZoneApp::findTimeZone(const std::string& name) {
@@ -122,6 +163,10 @@ void TimeZoneApp::displayTimeZone(const std::string& name) {
     std::cout << "  Current time: " << localTime.toString() << std::endl;
     std::cout << "  UTC offset: " << (totalOffset >= 0 ? "+" : "") << totalOffset << " hours" << std::endl;
     std::cout << "  DST status: " << (dstActive ? "Active" : (tz->hasDST ? "Inactive" : "Not observed")) << std::endl;
+
+    // Check if this is a favorite
+    bool isFavorite = std::find(favorites.begin(), favorites.end(), tz->name) != favorites.end();
+    std::cout << "  Favorite: " << (isFavorite ? "Yes" : "No") << std::endl;
 }
 
 void TimeZoneApp::convertTime() {
@@ -218,20 +263,31 @@ void TimeZoneApp::manageFavorites() {
     std::cout << "Enter time zone code to add/remove from favorites: ";
     std::getline(std::cin, tzName);
 
+    // Check if time zone exists
     if (!findTimeZone(tzName)) {
         std::cout << "Time zone not found." << std::endl;
         return;
     }
 
-
+    // Check if already in favorites
     auto it = std::find(favorites.begin(), favorites.end(), tzName);
     if (it != favorites.end()) {
+        // Remove from favorites
         favorites.erase(it);
         std::cout << tzName << " removed from favorites." << std::endl;
     }
     else {
+        // Add to favorites
         favorites.push_back(tzName);
         std::cout << tzName << " added to favorites." << std::endl;
+    }
+
+    // Save favorites immediately
+    if (saveFavorites()) {
+        std::cout << "Favorites saved successfully." << std::endl;
+    }
+    else {
+        std::cout << "Warning: Failed to save favorites." << std::endl;
     }
 }
 

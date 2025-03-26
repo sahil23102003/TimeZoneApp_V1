@@ -128,11 +128,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DateTime.cpp" />
+    <ClCompile Include="FileUtils.cpp" />
     <ClCompile Include="TimeZoneApp.cpp" />
     <ClCompile Include="TimeZoneApp_V1.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DateTime.h" />
+    <ClInclude Include="FileUtils.h" />
     <ClInclude Include="TimeZone.h" />
     <ClInclude Include="TimeZoneApp.h" />
   </ItemGroup>

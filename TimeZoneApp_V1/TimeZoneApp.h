@@ -11,7 +11,7 @@ private:
     std::vector<TimeZone> timeZones;
     std::vector<std::string> favorites;
     bool dstEnabled; 
-
+    std::string favoritesFilePath;
 
     void initializeTimeZones();
 
@@ -38,8 +38,13 @@ private:
 
     void displayHelp();
 
+    bool saveFavorites();
+
+    bool loadFavorites();
+
 public:
-    TimeZoneApp();
+    TimeZoneApp(const std::string& favoritesFile = "favorites.csv");
+    ~TimeZoneApp();
     void run();
 };
 
